@@ -1,0 +1,41 @@
+{
+	"UUID": "com.lemonsieurxav.patrimoine",
+	"Name": "Patrimoine",
+	"Version": "0.1.0.0",
+	"Author": "Xavier Fonseca",
+	"Description": "Votre patrimoine, votre budget et votre tresorerie sur des touches physiques. Fonctionne avec votre compte Finary, en lecture seule : le plugin ne peut rien modifier.",
+	"Category": "Patrimoine",
+	"CategoryIcon": "images/category",
+	"Icon": "images/plugin",
+	"CodePath": "plugin.js",
+	"PropertyInspectorPath": "inspector/chiffre.html",
+	"SDKVersion": 3,
+	"Software": {
+		"MinimumVersion": "7.1"
+	},
+	"OS": [
+		{
+			"Platform": "mac",
+			"MinimumVersion": "10.15"
+		}
+	],
+	"Nodejs": {
+		"Version": "20"
+	},
+	"Actions": [
+		{
+			"UUID": "com.lemonsieurxav.patrimoine.chiffre",
+			"Name": "Chiffre",
+			"Icon": "images/chiffre",
+			"Tooltip": "Affiche un chiffre de votre compte Finary. Premier appui : connexion. Ensuite : rafraichit.",
+			"States": [
+				{
+					"Image": "images/chiffre",
+					"TitleAlignment": "middle",
+					"FontSize": 12
+				}
+			],
+			"PropertyInspectorPath": "inspector/chiffre.html"
+		}
+	]
+}

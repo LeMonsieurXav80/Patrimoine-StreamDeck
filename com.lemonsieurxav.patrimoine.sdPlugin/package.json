@@ -1,0 +1,15 @@
+{
+  "name": "patrimoine-streamdeck",
+  "version": "0.1.0",
+  "description": "Plugin Stream Deck : patrimoine, budget et tresorerie Finary sur des touches physiques.",
+  "main": "plugin.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch plugin.js"
+  },
+  "author": "Xavier Fonseca",
+  "license": "MIT",
+  "dependencies": {
+    "@elgato/streamdeck": "^3.0.2"
+  }
+}

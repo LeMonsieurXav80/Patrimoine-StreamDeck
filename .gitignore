@@ -1,0 +1,11 @@
+# Dependances
+node_modules/
+
+# Logs ecrits par le plugin dans sa propre copie
+logs/
+*.log
+
+# Paquet distribuable
+*.streamDeckPlugin
+
+.DS_Store

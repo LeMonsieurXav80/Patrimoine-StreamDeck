@@ -1,0 +1,17 @@
+<!--
+  Icone de l'action, telle qu'elle apparait dans la liste de Stream Deck.
+
+  MONOCHROME ET FOND TRANSPARENT, et ce n'est pas un choix esthetique : les
+  regles Marketplace rejettent explicitement les icones d'action colorees ou a
+  fond plein. Elles doivent se fondre dans la liste, ou Stream Deck les teinte
+  lui-meme selon le theme.
+
+  Memes trois barres que l'icone du plugin, sans la couleur.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+  <g fill="#ffffff">
+    <rect x="2.5" y="12" width="4" height="5.5" rx="1"/>
+    <rect x="8" y="8.5" width="4" height="9" rx="1"/>
+    <rect x="13.5" y="4" width="4" height="13.5" rx="1"/>
+  </g>
+</svg>

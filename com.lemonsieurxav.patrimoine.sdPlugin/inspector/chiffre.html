@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Patrimoine</title>
+<style>
+  body { font: 13px -apple-system, system-ui, sans-serif; color: #d8d8d8; background: #2d2d2d; margin: 0; padding: 14px; }
+  .champ { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
+  label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #9b9b9b; }
+  select { background: #3d3d3d; border: 1px solid #555; color: #eee; border-radius: 4px; padding: 6px 7px; font: inherit; width: 100%; box-sizing: border-box; }
+  select:focus { outline: 2px solid #4a90d9; outline-offset: -1px; }
+  .aide { font-size: 11px; color: #8d8d8d; line-height: 1.45; }
+  .etat { padding: 8px 10px; border-radius: 4px; font-size: 11px; border-left: 3px solid #666; background: #363636; line-height: 1.45; }
+  .etat.ok { border-left-color: #3f9168; }
+  .etat.ko { border-left-color: #c4833f; }
+  button { background: #3d3d3d; border: 1px solid #555; color: #eee; border-radius: 4px; padding: 6px 10px; font: inherit; cursor: pointer; margin-top: 8px; }
+  button:hover { background: #474747; }
+  a { color: #6aa9e0; }
+</style>
+</head>
+<body>
+
+<div class="champ">
+  <label for="mesure">Chiffre à afficher</label>
+  <select id="mesure">
+    <option value="patrimoine">Patrimoine — net, brut, financier</option>
+    <option value="budget">Budget du mois — solde, entrées, sorties</option>
+    <option value="tresorerie">Trésorerie — courants et livrets</option>
+  </select>
+  <span class="aide">Un appui sur la touche met le chiffre à jour. Pas besoin d'un bouton dédié.</span>
+</div>
+
+<div id="etat" class="etat">Vérification de la connexion…</div>
+<button id="deco" hidden>Se déconnecter de Finary</button>
+
+<p class="aide" style="margin-top:18px">
+  Les données viennent du connecteur officiel Finary, en <strong>lecture seule</strong> :
+  ce plugin ne peut rien modifier dans votre compte. Rien ne transite par un serveur tiers —
+  votre machine parle directement à Finary.
+  <a href="https://finary.com/fr/mcp" target="_blank">En savoir plus</a>
+</p>
+
+<script>
+let websocket, uuid, settings = {};
+
+// Pas de bouton « Enregistrer » : les reglages se sauvegardent au changement.
+// Les regles Marketplace l'imposent, et c'est de toute facon ce qu'on attend
+// d'un panneau de reglages.
+function sauver() {
+  websocket.send(JSON.stringify({ event: 'setSettings', context: uuid, payload: settings }));
+}
+
+function demander(action) {
+  websocket.send(JSON.stringify({ event: 'sendToPlugin', context: uuid, payload: { action } }));
+}
+
+function afficherEtat(connecte) {
+  const etat = document.getElementById('etat');
+  const bouton = document.getElementById('deco');
+  etat.className = 'etat ' + (connecte ? 'ok' : 'ko');
+  etat.textContent = connecte
+    ? 'Connecté à Finary. Les chiffres se mettent à jour toutes les 10 minutes.'
+    : "Pas encore connecté. Appuyez sur la touche : votre navigateur s'ouvrira pour autoriser l'accès à votre compte Finary.";
+  bouton.hidden = !connecte;
+}
+
+function connectElgatoStreamDeckSocket(port, pluginUUID, registerEvent) {
+  uuid = pluginUUID;
+  websocket = new WebSocket('ws://127.0.0.1:' + port);
+  websocket.onopen = () => {
+    websocket.send(JSON.stringify({ event: registerEvent, uuid }));
+    websocket.send(JSON.stringify({ event: 'getSettings', context: uuid }));
+    demander('etat');
+  };
+  websocket.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.event === 'didReceiveSettings') {
+      settings = data.payload.settings ?? {};
+      document.getElementById('mesure').value = settings.mesure ?? 'patrimoine';
+    }
+    if (data.event === 'sendToPropertyInspector') {
+      afficherEtat(Boolean(data.payload?.connecte));
+    }
+  };
+}
+window.connectElgatoStreamDeckSocket = connectElgatoStreamDeckSocket;
+
+document.getElementById('mesure').addEventListener('change', (e) => {
+  settings.mesure = e.target.value;
+  sauver();
+});
+
+document.getElementById('deco').addEventListener('click', () => demander('deconnecter'));
+</script>
+</body>
+</html>
