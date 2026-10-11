@@ -28,6 +28,9 @@ Le libellé du budget porte l'avancement du mois — `BUDGET 11/31`. Ce n'est pa
 **Un appui sur une touche met son chiffre à jour.** Il n'y a pas de bouton « rafraîchir » dédié : ce
 serait une touche gâchée sur les quinze d'un Stream Deck MK.2.
 
+**La couleur du bandeau se choisit** dans le panneau de réglages, touche par touche. Le texte suit :
+il passe au sombre sur un fond clair, pour rester lisible quelle que soit la couleur choisie.
+
 ## Installation
 
 ### Depuis la Marketplace Elgato

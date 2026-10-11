@@ -1,6 +1,6 @@
 {
   "name": "patrimoine-streamdeck",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Plugin Stream Deck : patrimoine, budget et tresorerie Finary sur des touches physiques.",
   "main": "plugin.js",
   "type": "module",

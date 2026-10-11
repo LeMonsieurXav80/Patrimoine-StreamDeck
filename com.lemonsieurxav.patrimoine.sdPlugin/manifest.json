@@ -1,7 +1,7 @@
 {
 	"UUID": "com.lemonsieurxav.patrimoine",
 	"Name": "Patrimoine",
-	"Version": "0.1.0.0",
+	"Version": "0.1.1.0",
 	"Author": "Xavier Fonseca",
 	"Description": "Votre patrimoine, votre budget et votre tresorerie sur des touches physiques. Fonctionne avec votre compte Finary, en lecture seule : le plugin ne peut rien modifier.",
 	"Category": "Patrimoine",
