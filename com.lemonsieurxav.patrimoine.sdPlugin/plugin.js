@@ -158,6 +158,7 @@ class Patrimoine {
 
     const svg = renderMesure(affichee, {
       auth: entree.flash ? null : this.authEtat,
+      couleur: entree.couleur ?? null,
       ageMs: Date.now() - this.asOf,
       stale: !entree.flash && this.fige,
       blinkOff: this.blinkOff,
@@ -206,9 +207,16 @@ class Patrimoine {
     }
   }
 
-  inscrire(id, action, mesure) {
+  inscrire(id, action, reglages) {
     const existante = this.touches.get(id);
-    this.touches.set(id, { ...existante, action, mesure });
+    this.touches.set(id, {
+      ...existante,
+      action,
+      mesure: reglages.mesure ?? 'patrimoine',
+      // `null` et non une valeur par defaut : c'est l'absence de choix qui
+      // laisse la mesure garder sa propre couleur d'identite.
+      couleur: reglages.couleur ?? null,
+    });
   }
 
   retirer(id) {
@@ -229,8 +237,7 @@ class ChiffreAction extends SingletonAction {
   }
 
   async onWillAppear(ev) {
-    const mesure = ev.payload.settings?.mesure ?? 'patrimoine';
-    app.inscrire(ev.action.id, ev.action, mesure);
+    app.inscrire(ev.action.id, ev.action, ev.payload.settings ?? {});
     await app.demarrer();
     app.peindreUne(ev.action.id);
   }
@@ -240,7 +247,7 @@ class ChiffreAction extends SingletonAction {
   }
 
   onDidReceiveSettings(ev) {
-    app.inscrire(ev.action.id, ev.action, ev.payload.settings?.mesure ?? 'patrimoine');
+    app.inscrire(ev.action.id, ev.action, ev.payload.settings ?? {});
     app.peindreUne(ev.action.id);
   }
 
@@ -253,9 +260,13 @@ class ChiffreAction extends SingletonAction {
       app.authEtat = 'connexion';
       app.peindreTout();
     }
-    await streamDeck.ui.current?.sendToPropertyInspector({
-      connecte: estConnecte(),
-    });
+    // `streamDeck.ui.sendToPropertyInspector`, et surtout PAS
+    // `streamDeck.ui.current?.…` : `current` n'existe pas sur le controleur
+    // (la propriete s'appelle `action`), donc l'optional chaining avalait
+    // l'appel en silence et le panneau restait bloque sur « Vérification de la
+    // connexion… ». Un `?.` sur un nom de propriete faux ne leve rien : il
+    // fabrique un echec muet.
+    await streamDeck.ui.sendToPropertyInspector({ connecte: estConnecte() });
   }
 
   /**

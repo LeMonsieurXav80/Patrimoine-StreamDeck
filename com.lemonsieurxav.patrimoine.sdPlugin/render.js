@@ -41,6 +41,40 @@ const INK_BAND = '#eaeef2';
 const INK_KEY = '#dde3ea';
 const FONT = 'Arial, Helvetica, sans-serif';
 
+/** `#abc` ou `#aabbcc` -> `[r, v, b]`, ou `null` si ce n'est pas une couleur. */
+function versRgb(hex) {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex ?? '').trim());
+  if (!m) return null;
+  const c = m[1].length === 3 ? [...m[1]].map((x) => x + x).join('') : m[1];
+  const n = parseInt(c, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/**
+ * Encre lisible sur un fond donne : sombre sur clair, claire sur sombre.
+ *
+ * LE COCKPIT RESOLVAIT CE PROBLEME A L'ENVERS, et il avait ses raisons : il
+ * BRIDAIT la clarte des couleurs de marque pour que son texte quasi blanc
+ * reste lisible. Ici la couleur est choisie par l'utilisateur, delibérement.
+ * La tordre serait lui desobeir — c'est donc le TEXTE qui s'adapte.
+ *
+ * Luminance relative WCAG, et seuil a 0,5 : au-dessus le fond est clair, on
+ * ecrit en sombre. Sans ca, un jaune vif choisi dans le selecteur donne une
+ * touche ou l'on ne lit plus rien.
+ */
+function encreSur(hex) {
+  const rgb = versRgb(hex);
+  if (!rgb) return { principale: INK_BAND, secondaire: INK_BAND };
+  const [r, v, b] = rgb.map((c) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * r + 0.7152 * v + 0.0722 * b;
+  return luminance > 0.5
+    ? { principale: '#15181d', secondaire: '#15181d' }
+    : { principale: INK_BAND, secondaire: INK_BAND };
+}
+
 /**
  * Mini-icones, dessinees sur une grille 24x24 et reduites a 18 px.
  * Tracees au trait : a cette taille une forme pleine devient une tache dont on
@@ -86,11 +120,15 @@ function shortAge(ms) {
  * @param {object|null} mesure  mesure collectee, ou null
  * @param {object} options
  * @param {'connexion'|'ouverture'|null} [options.auth]  etat d'authentification
+ * @param {string|null} [options.couleur]  bandeau choisi par l'utilisateur (hex)
  * @param {number} [options.ageMs]   age de la mesure
  * @param {boolean} [options.stale]  mesure perimee
  * @param {boolean} [options.blinkOff] phase eteinte : le rond s'eteint
  */
-export function renderMesure(mesure, { auth = null, ageMs = 0, stale = false, blinkOff = false } = {}) {
+export function renderMesure(
+  mesure,
+  { auth = null, couleur = null, ageMs = 0, stale = false, blinkOff = false } = {},
+) {
   // ETAT NON CONNECTE : ce n'est pas une erreur, et ca ne doit pas y
   // ressembler. C'est l'etat normal d'un plugin qu'on vient d'installer, et la
   // touche doit dire QUOI FAIRE — « appuyer » — et non « ERR ».
@@ -148,7 +186,10 @@ export function renderMesure(mesure, { auth = null, ageMs = 0, stale = false, bl
   }
 
   return frame({
-    band: BANDS[mesure.band] ?? BANDS.neutre,
+    // La couleur choisie dans le panneau prime sur celle de la mesure. Les
+    // etats d'authentification ci-dessus gardent le gris neutre : ce sont des
+    // etats du plugin, pas la donnee que l'utilisateur a mise en couleur.
+    band: couleur ?? mesure.band,
     status,
     label: mesure.label,
     value: mesure.value,
@@ -160,6 +201,10 @@ export function renderMesure(mesure, { auth = null, ageMs = 0, stale = false, bl
 
 function frame({ band, status, label, value, rows, icon, blinkOff }) {
   const hasIcon = Boolean(ICONS[icon]);
+  // Le bandeau peut venir de la palette ou d'une couleur choisie dans le
+  // selecteur du panneau de reglages. Dans les deux cas l'encre s'y adapte.
+  const fond = versRgb(band) ? band : (BANDS[band] ?? BANDS.neutre);
+  const encre = encreSur(fond);
 
   // Largeur disponible mesuree, pas devinee : sans ca « TRÉSORERIE » passe
   // sous le rond de statut.
@@ -201,14 +246,14 @@ function frame({ band, status, label, value, rows, icon, blinkOff }) {
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
   <rect width="144" height="144" rx="12" fill="${BG}"/>
-  <rect width="144" height="72" rx="12" fill="${band}"/>
-  <rect y="58" width="144" height="14" fill="${band}"/>
-  ${hasIcon ? `<g transform="translate(10,11) scale(0.72)" fill="none" stroke="${INK_BAND}" stroke-width="2.2" opacity="0.85">${ICONS[icon]}</g>` : ''}
+  <rect width="144" height="72" rx="12" fill="${fond}"/>
+  <rect y="58" width="144" height="14" fill="${fond}"/>
+  ${hasIcon ? `<g transform="translate(10,11) scale(0.72)" fill="none" stroke="${encre.secondaire}" stroke-width="2.2" opacity="0.85">${ICONS[icon]}</g>` : ''}
   <circle cx="128" cy="20" r="7" fill="${dot}"/>
-  <text x="${hasIcon ? 76 : 68}" y="26" text-anchor="middle" font-family="${FONT}" font-size="${labelSize}" font-weight="bold" fill="${INK_BAND}">${escape(
+  <text x="${hasIcon ? 76 : 68}" y="26" text-anchor="middle" font-family="${FONT}" font-size="${labelSize}" font-weight="bold" fill="${encre.secondaire}">${escape(
     String(label).toUpperCase().slice(0, 16),
   )}</text>
-  <text x="72" y="59" text-anchor="middle" font-family="${FONT}" font-size="${valueSize}" font-weight="bold" fill="${INK_BAND}">${escape(
+  <text x="72" y="59" text-anchor="middle" font-family="${FONT}" font-size="${valueSize}" font-weight="bold" fill="${encre.principale}">${escape(
     value,
   )}</text>
   ${body}

@@ -15,6 +15,10 @@
   .etat.ko { border-left-color: #c4833f; }
   button { background: #3d3d3d; border: 1px solid #555; color: #eee; border-radius: 4px; padding: 6px 10px; font: inherit; cursor: pointer; margin-top: 8px; }
   button:hover { background: #474747; }
+  .ligne { display: flex; gap: 8px; align-items: center; }
+  .ligne button { margin-top: 0; white-space: nowrap; }
+  input[type=color] { width: 56px; height: 30px; padding: 2px; background: #3d3d3d; border: 1px solid #555; border-radius: 4px; cursor: pointer; }
+  .discret { font-size: 11px; color: #9b9b9b; }
   a { color: #6aa9e0; }
 </style>
 </head>
@@ -30,6 +34,15 @@
   <span class="aide">Un appui sur la touche met le chiffre à jour. Pas besoin d'un bouton dédié.</span>
 </div>
 
+<div class="champ">
+  <label for="couleur">Couleur du bandeau</label>
+  <div class="ligne">
+    <input id="couleur" type="color" value="#8a6327">
+    <button id="defaut" type="button" class="discret">Couleur d'origine</button>
+  </div>
+  <span class="aide">Le texte s'adapte automatiquement : il passe au sombre sur un fond clair, pour rester lisible.</span>
+</div>
+
 <div id="etat" class="etat">Vérification de la connexion…</div>
 <button id="deco" hidden>Se déconnecter de Finary</button>
 
@@ -42,6 +55,11 @@
 
 <script>
 let websocket, uuid, settings = {};
+// UUID de l'action (« com.lemonsieurxav.patrimoine.chiffre »), fourni par
+// Stream Deck a l'enregistrement. INDISPENSABLE pour `sendToPlugin` : sans ce
+// champ le message est ignore sans le moindre signalement, et le panneau reste
+// indefiniment sur « Vérification de la connexion… ».
+let actionUuid = null;
 
 // Pas de bouton « Enregistrer » : les reglages se sauvegardent au changement.
 // Les regles Marketplace l'imposent, et c'est de toute facon ce qu'on attend
@@ -51,7 +69,9 @@ function sauver() {
 }
 
 function demander(action) {
-  websocket.send(JSON.stringify({ event: 'sendToPlugin', context: uuid, payload: { action } }));
+  websocket.send(
+    JSON.stringify({ event: 'sendToPlugin', action: actionUuid, context: uuid, payload: { action } }),
+  );
 }
 
 function afficherEtat(connecte) {
@@ -64,8 +84,28 @@ function afficherEtat(connecte) {
   bouton.hidden = !connecte;
 }
 
-function connectElgatoStreamDeckSocket(port, pluginUUID, registerEvent) {
+// Couleur d'identite par defaut de chaque mesure, cote plugin. Reprise ici
+// pour que le selecteur montre la couleur reellement affichee tant que
+// l'utilisateur n'a rien choisi.
+const DEFAUTS = { patrimoine: '#8a6327', budget: '#8a6327', tresorerie: '#8a6327' };
+
+function appliquerReglages() {
+  const mesure = settings.mesure ?? 'patrimoine';
+  document.getElementById('mesure').value = mesure;
+  document.getElementById('couleur').value = settings.couleur ?? DEFAUTS[mesure] ?? '#8a6327';
+  document.getElementById('defaut').hidden = !settings.couleur;
+}
+
+function connectElgatoStreamDeckSocket(port, pluginUUID, registerEvent, info, actionInfo) {
   uuid = pluginUUID;
+  // `actionInfo` arrive en chaine JSON. C'est la seule source de l'UUID
+  // d'action pour le panneau.
+  try {
+    actionUuid = JSON.parse(actionInfo)?.action ?? null;
+  } catch {
+    actionUuid = null;
+  }
+
   websocket = new WebSocket('ws://127.0.0.1:' + port);
   websocket.onopen = () => {
     websocket.send(JSON.stringify({ event: registerEvent, uuid }));
@@ -76,7 +116,7 @@ function connectElgatoStreamDeckSocket(port, pluginUUID, registerEvent) {
     const data = JSON.parse(e.data);
     if (data.event === 'didReceiveSettings') {
       settings = data.payload.settings ?? {};
-      document.getElementById('mesure').value = settings.mesure ?? 'patrimoine';
+      appliquerReglages();
     }
     if (data.event === 'sendToPropertyInspector') {
       afficherEtat(Boolean(data.payload?.connecte));
@@ -88,6 +128,22 @@ window.connectElgatoStreamDeckSocket = connectElgatoStreamDeckSocket;
 document.getElementById('mesure').addEventListener('change', (e) => {
   settings.mesure = e.target.value;
   sauver();
+  appliquerReglages();
+});
+
+// `input` et non `change` : la touche suit le curseur pendant qu'on choisit,
+// ce qui est tout l'interet d'un selecteur de couleur — on juge sur la touche,
+// pas sur la pastille.
+document.getElementById('couleur').addEventListener('input', (e) => {
+  settings.couleur = e.target.value;
+  sauver();
+  document.getElementById('defaut').hidden = false;
+});
+
+document.getElementById('defaut').addEventListener('click', () => {
+  delete settings.couleur;
+  sauver();
+  appliquerReglages();
 });
 
 document.getElementById('deco').addEventListener('click', () => demander('deconnecter'));
